@@ -1,0 +1,11 @@
+.git
+.DS_Store
+**/__pycache__
+**/*.pyc
+**/*.pyo
+logs/
+2026-*.txt
+README.md
+PROYECTO.md
+scripts/
+.env

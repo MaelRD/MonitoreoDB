@@ -12,7 +12,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./schema_postgres.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ../sql/schema_postgres.sql:/docker-entrypoint-initdb.d/01-schema.sql
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
@@ -20,32 +20,12 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       timeout: 10s
       retries: 10
-      interval: 10s
-    command:
-      - "postgres"
-      - "-c"
-      - "log_statement=all"
-
-  postgrest:
-    image: postgrest/postgrest:latest
-    container_name: postgrest_api
-    environment:
-      PGRST_DB_URI: postgresql://api_user:api_pass@postgres:5432/productividad_corporativa
-      PGRST_DB_SCHEMA: public
-      PGRST_DB_ANON_ROLE: api_user
-      PGRST_JWT_SECRET: your-secret-key-change-in-production
-      PGRST_OPENAPI_SERVER_PROXY_URL: http://localhost:3000
-    ports:
-      - "3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - app_network
+      interval: 5s
 
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin_productividad
+    profiles: ["tools"]
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -60,9 +40,70 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile.api
+    container_name: monitoreodb_api
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: productividad_corporativa
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_pass
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      timeout: 5s
+      retries: 6
+      interval: 5s
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dashboard
+    container_name: monitoreodb_dashboard
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+
+  watcher:
+    build:
+      context: ..
+      dockerfile: Dockerfile.watcher
+    container_name: monitoreodb_watcher
+    environment:
+      API_URL: http://api:8000
+      WATCH_DIR: /watch
+      STATE_FILE: /state/watcher_state.json
+    volumes:
+      - ../logs:/watch
+      - watcher_state:/state
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   pgadmin_data:
+  watcher_state:
 
 networks:
   app_network:

@@ -269,7 +269,6 @@ INSERT INTO aplicaciones (dominio, nombre_app, categoria_id, prioridad_bloqueo) 
 ('www.googleapis.com', 'Google APIs', 1, FALSE),
 ('taskassist-pa.googleapis.com', 'Task Assist', 1, FALSE),
 ('appsgrowthpromo-pa.googleapis.com', 'Apps Growth', 1, FALSE),
-('connectivitycheck.gstatic.com', 'Connectivity', 3, FALSE),
 ('android.clients.google.com', 'Android Clients', 1, FALSE),
 ('play-fe.googleapis.com', 'Play FE', 1, FALSE),
 ('inbox.google.com', 'Google Inbox', 1, FALSE),
